@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="icon" href="{% static 'img/site-pic.ico' %}" type= "image/icon type" />
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <title>Weather Forecast</title>
+    <style>
+        /* Chatbot widget styles */
+        .chat-widget-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .chat-widget-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color:rgb(15, 43, 88);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .chat-widget-button:hover {
+            transform: scale(1.05);
+            background-color:rgb(38, 65, 108);
+        }
+        
+        .chat-widget-window {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 350px;
+            height: 500px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            transform-origin: bottom right;
+        }
+        
+        .chat-widget-window.active {
+            display: flex;
+            animation: scaleUp 0.3s forwards;
+        }
+        
+        @keyframes scaleUp {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .chat-header {
+            background-color:rgb(36, 89, 127);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        
+        .close-chat {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        
+        .user-message {
+            background-color: #e1f5fe;
+            color: #01579b;
+            padding: 10px 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            max-width: 70%;
+            margin-left: auto;
+            text-align: right;
+            word-wrap: break-word;
+        }
+        
+        .bot-message {
+            background-color:rgb(204, 232, 240);
+            color:rgb(12, 68, 93);
+            padding: 10px 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            max-width: 70%;
+            white-space: pre-line;
+            word-wrap: break-word;
+        }
+        
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 10px 15px;
+            gap: 10px;
+            background-color: #f0f0f0;
+        }
+        
+        .suggestion-chip {
+            background-color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid #e0e0e0;
+            transition: all 0.2s ease;
+        }
+        
+        .suggestion-chip:hover {
+            background-color:rgb(228, 239, 242);
+            border-color:rgb(82, 140, 194);
+        }
+        
+        .input-area {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #eee;
+            background-color: white;
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+        }
+        
+        #user-input:focus {
+            border-color:rgb(83, 139, 194);
+        }
+        
+        .send-button {
+            background-color:rgb(21, 44, 92);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-left: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .send-button:hover {
+            background-color:rgb(90, 164, 205);
+        }
+        
+        /* Bot indicator */
+        .bot-typing {
+            display: none;
+            color: #888;
+            font-style: italic;
+            padding: 5px 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <main class="{{ description }}" >
+        <section class="side-container">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="search-container">
+                    <div style="width: 22px; height: 22px; color: white;" class="weather-icon"
+                        <i class="bi bi-cloud-fog"></i>
+                    </div>
+                    <input
+                        type="text"
+                        name="city"
+                        class="geo-input"
+                        placeholder="ex. Mumbai"
+                        value="{{ location }}"
+                    />
+                    <button class="search-button">
+                        <div style="width: 25px; height: 25px; color: white;">
+                            <i class="bi bi-search"></i>
+
+                        </div>
+                    </button>
+                </div>
+            </form>
+            <div class="day-stats" >
+                <h2 class="day-stats__temperature">
+                    <span class="day-stats__temperature_value">{{ current_temp }}</span>°
+                </h2>
+                <h3 class="day-stats__feels_like">
+                    Feels like:&nbsp&nbsp<span class="day-stats__feelslike_value">{{ feels_like }}</span>°
+                </h3>
+                <ul class="day-stats_conditions">
+                    <li>
+                        <p class="day-stats_condition" >
+                            <span class="day-stats__humidity">{{ humidity }}</span>%
+                        </p>
+                        <p class="day-stats__condition_text">of humidity</p>
+                    </li>
+                    <li>
+                        <p class="day-stats_condition">
+                            <span class="day-stats__clouds">{{ clouds }}</span>%
+                        </p>
+                        <p class="day-stats__condition_text">of clouds</p>
+                    </li>
+                </ul> 
+            </div>
+            <img src="{% static 'img/side-blur.png' %}" class="side-blur" alt="blur"/>
+        </section>
+
+        <section class="main-container">
+            <h4 class="secondary-title">Weather Forecast</h4>
+            <h1 class="weather__primary-title">{{ description }}</h1>
+            <div class="weather__location">
+                <div style="width: 15px; height: 15px; color: white;" class="location-icon">
+                    <i class="bi bi-geo-fill"></i>
+                </div>
+                <p class="weather__location-text">
+                    <span class="weather__location-city">{{ city }}</span>
+                    <span class="weather__location-country">{{ country }}</span>
+                    
+                </p>
+            </div>
+            <!-- 15 Day Forecast -->
+            <ul class="forecast">
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day1 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp1 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum1 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day2 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp2 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum2 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day3 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp3 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum3 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day4 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp4 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum4 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day5 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp5 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum5 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day6 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp6 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum6 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day7 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp7 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum7 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day8 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp8 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum8 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day9 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp9 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum9 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day10 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp10 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum10 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day11 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp11 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum11 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day12 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp12 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum12 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day13 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp13 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum13 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day14 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp14 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum14 }}</span>
+                    </p>
+                </li>
+                <li class="forecast-item">
+                    <p class="forecast-day">{{ day15 }}</p>
+                    <p class="forecast-temperature">
+                        &nbsp;<span class="forecast-temperatureValue">{{ temp15 }}</span>°
+                    </p>
+                    <p class="forecastWindText">
+                        Humidity: <span class="forecast-humidityValue">{{ hum15 }}</span>
+                    </p>
+                </li>
+            </ul>
+            <!-- Temperature Chart -->
+            <canvas id="chart" height="45px"></canvas>
+        <section/>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="{% static 'js/chartsetup.js' %}"></script>
+
+    <!-- Chatbot Widget -->
+    <div class="chat-widget-container">
+        <!-- Chat Button -->
+        <div class="chat-widget-button" id="chat-toggle">
+            <!-- Using Bootstrap Icons for consistency with your site -->
+            <i class="bi bi-chat-dots-fill" style="font-size: 24px; color: white;"></i>
+        </div>
+        
+        <!-- Chat Window -->
+        <div class="chat-widget-window" id="chat-window">
+            <div class="chat-header">
+                <h3>Farm Assistant</h3>
+                <button class="close-chat" id="close-chat">&times;</button>
+            </div>
+            <div id="chat-messages">
+                <!-- Messages will appear here -->
+                <div class="bot-typing" id="bot-typing">Bot is typing...</div>
+            </div>
+            <div class="suggestions">
+                <div class="suggestion-chip" onclick="usePrompt('Which crop is best for sandy soil?')">Sandy soil crops</div>
+                <div class="suggestion-chip" onclick="usePrompt('How can I improve clay soil?')">Improve clay soil</div>
+                <div class="suggestion-chip" onclick="usePrompt('Tell me about growing wheat')">About wheat</div>
+                <div class="suggestion-chip" onclick="usePrompt('Best practices for organic farming')">Organic farming</div>
+            </div>
+            <div class="input-area">
+                <input type="text" id="user-input" placeholder="Ask me about farming...">
+                <button class="send-button" onclick="sendMessage()">
+                    <i class="bi bi-send-fill" style="color: white;"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="{% static 'js/chartsetup.js' %}"></script>
+
+    <script>
+        // Toggle chat window
+        document.getElementById('chat-toggle').addEventListener('click', function() {
+            const chatWindow = document.getElementById('chat-window');
+            chatWindow.classList.toggle('active');
+            
+            // If it's the first time opening, show welcome message
+            if (chatWindow.classList.contains('active') && chatWindow.dataset.initialized !== 'true') {
+                setTimeout(() => {
+                    addMessage("Welcome to Farm Assistant! I can help you with crop recommendations, soil improvement, and farming practices based on weather conditions. What would you like to know?", false);
+                    chatWindow.dataset.initialized = 'true';
+                }, 500);
+            }
+        });
+        
+        // Close chat window
+        document.getElementById('close-chat').addEventListener('click', function() {
+            document.getElementById('chat-window').classList.remove('active');
+        });
+        
+        function showBotTyping() {
+            document.getElementById('bot-typing').style.display = 'block';
+        }
+        
+        function hideBotTyping() {
+            document.getElementById('bot-typing').style.display = 'none';
+        }
+        
+        function addMessage(message, isUser) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            messageElement.className = isUser ? 'user-message' : 'bot-message';
+            
+            // Insert before the typing indicator
+            chatMessages.insertBefore(messageElement, document.getElementById('bot-typing'));
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function usePrompt(prompt) {
+            document.getElementById('user-input').value = prompt;
+        }
+
+        function sendMessage() {
+            const userInput = document.getElementById('user-input');
+            const message = userInput.value.trim();
+            
+            if (message) {
+                addMessage(message, true);
+                userInput.value = '';
+                
+                // Show typing indicator
+                showBotTyping();
+                
+                // Send to server - replace with your actual implementation
+                fetch('/process-message/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: 'message=' + encodeURIComponent(message)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideBotTyping();
+                    addMessage(data.response, false);
+                })
+                .catch(error => {
+                    hideBotTyping();
+                    console.error('Error:', error);
+                    addMessage("Sorry, I encountered an error processing your request. Please try again.", false);
+                });
+            }
+        }
+
+        function getCsrfToken() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    return value;
+                }
+            }
+            return '{{ csrf_token }}';  // Fallback to Django template tag
+        }
+
+        // Allow Enter key to send message
+        document.getElementById('user-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+
+</body>
+</html>
+
